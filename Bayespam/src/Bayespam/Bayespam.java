@@ -59,27 +59,6 @@ public class Bayespam
         vocab.put(word, counter);                       // put the word with its counter into the hashtable
     }
     
-    /// Return the frequency of the word in the Normal emails
-    private static int getNormalCounter(String word)
-    {
-        Multiple_Counter counter = new Multiple_Counter();
-
-        if ( vocab.containsKey(word) ){                  // if word exists already in the vocabulary..
-        	return counter.counter_regular;                       // get the counter from the hashtable
-        }
-        return 1;                    // put the word with its counter into the hashtable
-    }
-
-    /// Return the frequency of the word in the spam emails
-    private static int getSpamCounter(String word)
-    {
-        Multiple_Counter counter = new Multiple_Counter();
-
-        if ( vocab.containsKey(word) ){                  // if word exists already in the vocabulary..
-        	return counter.counter_spam;                    // get the counter from the hashtable
-        }
-        return 1;                    // put the word with its counter into the hashtable
-    }
 
     // List the regular and spam messages
     private static void listDirs(File dir_location)
@@ -120,17 +99,16 @@ public class Bayespam
 
 
     // Read the words from messages and add them to your vocabulary. The boolean type determines whether the messages are regular or not  
+    /// The function also returns the number of emails scanned 
     private static int readMessages(MessageType type)
     throws IOException
     {
         File[] messages = new File[0];
-
         if (type == MessageType.NORMAL){
             messages = listing_regular;
         } else {
             messages = listing_spam;
         }
-        
         int counterFile = 0;
         for (int i = 0; i < messages.length; ++i)
         {
@@ -148,18 +126,67 @@ public class Bayespam
             	while(sc.hasNext()){
             	 word = sc.next().replaceAll("[^a-zA-Z]", "").toLowerCase();    
             	 
-            	 if(!word.isEmpty() && word.length() > 4){
-            		 // System.out.println(word.toString());		// Print the tokenized word
+            	 if(!word.isEmpty() && word.length() > 4)
             		 addWord(word, type);    // add them to the vocabulary
-            	 }
             	}
                 
             }
-
             in.close();
         }
 		return counterFile;
     }
+    
+    /// This function reads the test-email, computes the posteri class probability 
+    /// and returns the total number of misclassifications for that category
+	private static int readTest(MessageType type, int alpha) throws IOException{
+			int errors = 0;
+            double postRegular = alpha;
+			double postSpam = alpha;
+			File[] messages = new File[1];
+			
+	        if (type == MessageType.NORMAL){
+	            messages = listing_regular;
+	        } else {
+	            messages = listing_spam;
+	        }
+	       
+			for (int i = 0; i < messages.length; ++i)
+	        {
+	            FileInputStream i_s = new FileInputStream( messages[i] );
+	            BufferedReader in = new BufferedReader(new InputStreamReader(i_s));
+	            String text;
+	            String word;
+	            Scanner sc;
+				while ((text = in.readLine()) != null)                      // read a line
+	            {
+	            	/// Scanner go through the lines and takes the single words
+	            	/// Omitting symbols and words shorter than 4 characters
+					// and words which are not saved in the hash-table
+					//System.out.println(i + text);
+
+	            	sc = new Scanner(text);
+	            	while(sc.hasNext()){
+	            	 word = sc.next().replaceAll("[^a-zA-Z]", "").toLowerCase();    
+	            	 if(vocab.containsKey(word) && !word.isEmpty() && word.length() > 4){
+	         	        postRegular += vocab.get(word).likelihood_regular;
+	        	        postSpam  += vocab.get(word).likelihood_spam;
+	            	} 
+	            	}
+	            }
+	            in.close();
+	            
+	            if(postRegular < postSpam && type == MessageType.NORMAL){
+	            	errors += 1;
+	            }
+	            if(postRegular > postSpam && type == MessageType.SPAM){
+	            	errors += 1;
+	            }
+	            //System.out.println(postRegular + " " + postSpam + " " +errors );
+	            postRegular = 0;
+	            postSpam = 0;
+	        }
+			return errors;
+	}
    
     public static void main(String[] args)
     throws IOException
@@ -180,55 +207,66 @@ public class Bayespam
         // Read the e-mail messages and count the numbers of email
         int nMessagesRegular = readMessages(MessageType.NORMAL);
         int nMessagesSpam = readMessages(MessageType.SPAM);
+        int nMessagesTotal = nMessagesRegular+nMessagesSpam;
 
         ///  Compute the prior probability
-        int priorRegular = nMessagesRegular/ nMessagesRegular+nMessagesSpam;
-        int priorSpam = nMessagesSpam/ nMessagesRegular+nMessagesSpam;
+        int priorRegular = nMessagesRegular/ nMessagesTotal;
+        int priorSpam = nMessagesSpam/ nMessagesTotal;
 
         /// Compute the likelihood
-        /// First find the number of words in each class of email...
-        double e = 100;		/// tuning parameter 3
-    	Iterator<String> words = vocab.keySet().iterator();
+        /// First find the total number of words in each class of email (zero-terms are substituted by e)...
+        double e = 0.1;		/// tuning parameter 3
+    	Iterator<String> line = vocab.keySet().iterator();
     	float nWordsRegular = 0;
     	float nWordsSpam = 0;
-        while( words.hasNext() ){
-        	String word = words.next();
+        while( line.hasNext() ){
+        	String word = line.next();
         	int regular_freq = vocab.get(word).counter_regular;
         	int spam_freq = vocab.get(word).counter_spam;
-        	
-        	if(regular_freq != 0){
-        		nWordsRegular +=  regular_freq;
-        	}else{
-        		nWordsRegular +=  e;		// If there are no occurances of a word, its frequency is replaced by e
-        	}
-        	
-        	if(spam_freq != 0){
-        		nWordsSpam +=  spam_freq;
-        	}else{
-        		nWordsSpam +=  e;		// If there are no occurances of a word, its frequency is replaced by e
-        	}
+        	nWordsRegular +=  regular_freq;      	
+       		nWordsSpam +=  spam_freq;
         }
-        System.out.println(nWordsRegular + " " + nWordsSpam);
+        int nWordsTotal = (int) (nWordsRegular + nWordsSpam);
+        System.out.println("number of regular words: " + nWordsRegular + "  number of spam words:  " + nWordsSpam);		
         
         /// ... then computes the relative frequencies of each word for each type of email and
         /// find the class conditional probability
-        words = vocab.keySet().iterator();
-        while( words.hasNext() ){
-        	String word = words.next();
+        line = vocab.keySet().iterator();
+        while( line.hasNext() ){
+        	String word = line.next();
+        	
+        	/// Take the number of occurrances of a word
         	double regular_freq = vocab.get(word).counter_regular;
-        	if(regular_freq != 0)
-        		vocab.get(word).setLikelihoodRegular(-Math.log10(regular_freq/ nWordsRegular)); /// the prob is log-normalized
-        	else
-        		vocab.get(word).setLikelihoodRegular(-Math.log10(e/(nWordsSpam+nWordsRegular)));
         	double spam_freq = vocab.get(word).counter_spam;
-        	if(spam_freq != 0)
-        		vocab.get(word).setLikelihoodSpam(-Math.log10(spam_freq/ nWordsSpam));
+        	
+        	if(regular_freq != 0)
+        		vocab.get(word).setLikelihoodRegular(Math.log10(regular_freq) + Math.log10(nWordsRegular)); /// the prob is log-normalized
         	else
-        		vocab.get(word).setLikelihoodSpam(-Math.log10(e/(nWordsSpam+nWordsRegular)));
+        		vocab.get(word).setLikelihoodRegular(Math.log10(e) + Math.log10(nWordsRegular + nWordsSpam)); // zero probabilities are estimated with a small value
+  
+        	if(spam_freq != 0)
+        		vocab.get(word).setLikelihoodSpam(Math.log10(spam_freq) + Math.log10(nWordsSpam));
+        	else
+        		vocab.get(word).setLikelihoodSpam(Math.log10(e) + Math.log10(nWordsRegular + nWordsSpam)); // zero probabilities are estimated with a small value
         }
         
         // Print out the hash table
-        printVocab();
+        //printVocab();
+         
+        // Find the posteri class probabilities and computes the error per category
+        int alpha = 0;
+        int errorRegular = 0;
+        int errorSpam = 0;
+        File dir_location2 = new File( args[1] );
+        // Initialize the regular and spam lists for the test
+        listDirs(dir_location2);
+		File[] messages = new File[0];
+        errorRegular = readTest(MessageType.NORMAL, alpha);
+        errorSpam = readTest(MessageType.SPAM, alpha);
+        System.out.println("Error for regular: "+ errorRegular + "   Error for spam " + errorSpam );
+        
+
+        
 
         // Now all students must continue from here:
         //
@@ -243,4 +281,6 @@ public class Bayespam
         //
         // Use the same steps to create a class BigramBayespam which implements a classifier using a vocabulary consisting of bigrams
     }
+
+
 }
