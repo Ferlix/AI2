@@ -72,6 +72,7 @@ public class BigramBayespam
             counter  = vocab.get(word);
             if(vocab.get(word).counter_regular + vocab.get(word).counter_spam < threshold)	
             	vocab.remove(word);
+            	
         }
     }
     
@@ -120,7 +121,7 @@ public class BigramBayespam
     // Read the words from messages and add them to your vocabulary. The boolean type determines whether the messages are regular or not  
     /// The function also returns the number of emails scanned 
     static String word2;
-    private static void readMessages(MessageType type, int minimalSize)
+    private static void readMessages(MessageType type)
     throws IOException
     {
         File[] messages = new File[0];
@@ -147,7 +148,7 @@ public class BigramBayespam
             	 if(sc.hasNext()){
             		 word2 = sc.next().replaceAll("[^a-zA-Z]", "").toLowerCase();
             	 }
-            	 if(!word.isEmpty() && word.length() >= minimalSize)
+            	 if(!word.isEmpty() && word.length() > 4)
             		 addWord(word.concat(word2.toString()), type);    // add them to the vocabulary
             	}
                 
@@ -232,10 +233,6 @@ public class BigramBayespam
     public static void main(String[] args)
     throws IOException
     {
-    	int minimalSize = 4;	/// minimal size of the word in the vocabulary
-    	double e = 0.1;			/// tuning parameter for computing the likelihood
-    	int threshold = 5;		/// minimum frequency allowed for a word in the vocabulary 
-    	
         // Location of the directory (the path) taken from the cmd line (first arg)
         File dir_location = new File( args[0] );
         
@@ -255,9 +252,9 @@ public class BigramBayespam
         double nMessagesTotal = nMessagesRegular+nMessagesSpam;
         
         // Build vocab
-        readMessages(MessageType.NORMAL, minimalSize);
-        readMessages(MessageType.SPAM, minimalSize);
-        cleanVocab(threshold);
+        readMessages(MessageType.NORMAL);
+        readMessages(MessageType.SPAM);
+
 
         ///  Compute the prior probability
         double priorRegular = nMessagesRegular/ nMessagesTotal;
@@ -265,6 +262,7 @@ public class BigramBayespam
         
         /// Compute the likelihood
         /// First find the total number of words in each class of email (zero-terms are substituted by e)...
+        double e = 0.1;		/// tuning parameter 3
     	Iterator<String> line = vocab.keySet().iterator();
     	float nWordsRegular = 0;
     	float nWordsSpam = 0;
