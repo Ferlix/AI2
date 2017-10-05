@@ -101,7 +101,7 @@ public class Bayespam
 
     // Read the words from messages and add them to your vocabulary. The boolean type determines whether the messages are regular or not  
     /// The function also returns the number of emails scanned 
-    private static void readMessages(MessageType type, int threshold)
+    private static void readMessages(MessageType type)
     throws IOException
     {
         File[] messages = new File[0];
@@ -125,7 +125,7 @@ public class Bayespam
             	while(sc.hasNext()){
             	 word = sc.next().replaceAll("[^a-zA-Z]", "").toLowerCase();    
             	 
-            	 if(!word.isEmpty() && word.length() >= threshold)
+            	 if(!word.isEmpty() && word.length() > 4)
             		 addWord(word, type);    // add them to the vocabulary
             	}
                 
@@ -205,9 +205,8 @@ public class Bayespam
     public static void main(String[] args)
     throws IOException
     {
-    	double e = 0.01;		/// tuning parameter 3 for the zero frequency word
+    	double e = 0.2;		/// tuning parameter 3 for the zero frequency word
     	int alpha = 0;		/// tuning parameter for post probabilities (not used)
-    	int threshold = 5;  /// minimum lenght of accepted words in the vocabulary
     	
         // Location of the directory (the path) taken from the cmd line (first arg)
         File dir_location = new File( args[0] );
@@ -228,8 +227,8 @@ public class Bayespam
         double nMessagesTotal = nMessagesRegular+nMessagesSpam;
         
         // Build vocab
-        readMessages(MessageType.NORMAL, threshold);
-        readMessages(MessageType.SPAM, threshold);
+        readMessages(MessageType.NORMAL);
+        readMessages(MessageType.SPAM);
 
 
         ///  Compute the prior probability

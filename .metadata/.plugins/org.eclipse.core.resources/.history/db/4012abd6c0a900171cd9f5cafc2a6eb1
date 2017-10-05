@@ -207,7 +207,7 @@ public class Bayespam
     {
     	double e = 0.01;		/// tuning parameter 3 for the zero frequency word
     	int alpha = 0;		/// tuning parameter for post probabilities (not used)
-    	int threshold = 5;  /// minimum lenght of accepted words in the vocabulary
+    	int threshold = 4;  /// minimum lenght of accepted words in the vocabulary
     	
         // Location of the directory (the path) taken from the cmd line (first arg)
         File dir_location = new File( args[0] );
