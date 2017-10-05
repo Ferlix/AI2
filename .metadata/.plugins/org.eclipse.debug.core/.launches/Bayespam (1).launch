@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <launchConfiguration type="org.eclipse.jdt.launching.localJavaApplication">
 <listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_PATHS">
-<listEntry value="/BigramBayespam/src/BigramBayespam/BigramBayespam.java"/>
+<listEntry value="/Bayespam/src/Bayespam/Bayespam.java"/>
 </listAttribute>
 <listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_TYPES">
 <listEntry value="1"/>
 </listAttribute>
-<stringAttribute key="org.eclipse.jdt.launching.MAIN_TYPE" value="BigramBayespam.BigramBayespam"/>
+<stringAttribute key="org.eclipse.jdt.launching.MAIN_TYPE" value="Bayespam.Bayespam"/>
 <stringAttribute key="org.eclipse.jdt.launching.PROGRAM_ARGUMENTS" value="C:\Users\Marco\Documents\GitHub\AI2\Bayespam\src\train C:\Users\Marco\Documents\GitHub\AI2\Bayespam\src\test"/>
-<stringAttribute key="org.eclipse.jdt.launching.PROJECT_ATTR" value="BigramBayespam"/>
+<stringAttribute key="org.eclipse.jdt.launching.PROJECT_ATTR" value="Bayespam"/>
 </launchConfiguration>

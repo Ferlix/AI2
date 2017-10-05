@@ -62,15 +62,11 @@ public class BigramBayespam
     // Add a word to the vocabulary
     private static void cleanVocab(int threshold)
     {
-        Multiple_Counter counter = new Multiple_Counter();
-
         for (Enumeration<String> e = vocab.keys() ; e.hasMoreElements() ;)
         {   
             String word;
-            
             word = e.nextElement();
-            counter  = vocab.get(word);
-            if(vocab.get(word).counter_regular + vocab.get(word).counter_spam < threshold)	
+            if(vocab.get(word).counter_regular + vocab.get(word).counter_spam <= threshold)	
             	vocab.remove(word);
         }
     }
@@ -108,9 +104,7 @@ public class BigramBayespam
             counter  = vocab.get(word);
             
             System.out.println( word + " | in regular: " + counter.counter_regular + 
-                                " in spam: "    + counter.counter_spam +
-                                "\nregular likelihood: " + counter.likelihood_regular +
-                                "   spam likelihood: " + counter.likelihood_spam);
+                                " in spam: "    + counter.counter_spam);
         }
     }
     
@@ -119,10 +113,10 @@ public class BigramBayespam
 
     // Read the words from messages and add them to your vocabulary. The boolean type determines whether the messages are regular or not  
     /// The function also returns the number of emails scanned 
-    static String word2;
     private static void readMessages(MessageType type, int minimalSize)
     throws IOException
     {
+    	String word2 = new String();
         File[] messages = new File[0];
         if (type == MessageType.NORMAL){
             messages = listing_regular;
@@ -170,6 +164,7 @@ public class BigramBayespam
     /// This function reads the test-email, computes the posteri class probability 
     /// and returns the total number of misclassifications for that category
 	private static int readTest(MessageType type, int alpha, double priorProb) throws IOException{
+    		String word2 = new String();
 			int errors = 0;
             double postRegular = alpha;			// ALpha is the tuning parameter for the post-probabilities
  			double postSpam = alpha;
@@ -180,9 +175,7 @@ public class BigramBayespam
 	        } else {
 	            messages = listing_spam;
 	        }
-	         /// int n = messages.length;				// Check if the folder is right 
-	         /// System.out.printf(type + " %d \n", n);	
-	       
+
 			for (int i = 0; i < messages.length; ++i)
 	        {
 	            FileInputStream i_s = new FileInputStream( messages[i] );
@@ -233,8 +226,9 @@ public class BigramBayespam
     throws IOException
     {
     	int minimalSize = 4;	/// minimal size of the word in the vocabulary
-    	double e = 0.1;			/// tuning parameter for computing the likelihood
+    	double e = 0.001;		/// tuning parameter for computing the likelihood
     	int threshold = 5;		/// minimum frequency allowed for a word in the vocabulary 
+    	int alpha = 0; 			/// tuning parameter for the post-probabilities (not used)
     	
         // Location of the directory (the path) taken from the cmd line (first arg)
         File dir_location = new File( args[0] );
@@ -270,15 +264,11 @@ public class BigramBayespam
     	float nWordsSpam = 0;
         while( line.hasNext() ){
         	String word = line.next();
-        	int regular_freq = vocab.get(word).counter_regular;
-        	int spam_freq = vocab.get(word).counter_spam;
-        	nWordsRegular +=  regular_freq;      	
-       		nWordsSpam +=  spam_freq;
+        	nWordsRegular +=  vocab.get(word).counter_regular;      	
+       		nWordsSpam +=  vocab.get(word).counter_spam;
         }
-        int nWordsTotal = (int) (nWordsRegular + nWordsSpam);
-        //System.out.println("number of regular words: " + nWordsRegular + "  number of spam words:  " + nWordsSpam);		
         
-        /// ... then computes the relative frequencies of each word for each type of email and
+        /// ... then computes the relative log10-probabilities of each word for each type of email and
         /// find the class conditional probability
         line = vocab.keySet().iterator();
         while( line.hasNext() ){
@@ -300,37 +290,24 @@ public class BigramBayespam
         }
         
         // Print out the hash table
-        printVocab();
+        // printVocab();
          
         // Find the post-class probabilities and computes the error per category
-        int alpha = 0;
-        int FAR = 0;  // FAR = false accept rate (misses)
-        int FRR = 0;  // FRR = false reject rate (false alarms)
+        int normalError = 0;  
+        int spamError = 0;  
         File dir_location2 = new File( args[1] );	// Move to the 2nd folder
         listDirs(dir_location2);	// Initialize the regular and spam lists for the test
-        FAR = readTest(MessageType.NORMAL, alpha, priorRegular);
-        FRR = readTest(MessageType.SPAM, alpha, priorSpam);
+        normalError = readTest(MessageType.NORMAL, alpha, priorRegular);
+        spamError = readTest(MessageType.SPAM, alpha, priorSpam);
         
         // Make confusion matrix 
-		int [][] ConfusionMatrix = {{getNumberMessages(MessageType.NORMAL) - FAR,FAR},{getNumberMessages(MessageType.SPAM) - FRR,FRR}};
+		int [][] ConfusionMatrix = {{getNumberMessages(MessageType.NORMAL) - normalError, normalError}, {getNumberMessages(MessageType.SPAM) - spamError, spamError}};
 		printConfusionMatrix(ConfusionMatrix);
 		
-        
-
-        
-
-        // Now all students must continue from here:
-        //
-        // 1) A priori class probabilities must be computed from the number of regular and spam messages DONE
-        // 2) The vocabulary must be clean: punctuation and digits must be removed, case insensitive DONE
-        // 3) Conditional probabilities must be computed for every word DONE
-        // 4) A priori probabilities must be computed for every word DONE
-        // 5) Zero probabilities must be replaced by a small estimated value DONE
-        // 6) Bayes rule must be applied on new messages, followed by argmax classification DONE
-        // 7) Errors must be computed on the test set (FAR = false accept rate (misses), FRR = false reject rate (false alarms)) DONE
-        // 8) Improve the code and the performance (speed, accuracy) DONE
-        //
-        // Use the same steps to create a class BigramBayespam which implements a classifier using a vocabulary consisting of bigrams
+		// Comute the error rate 
+		double FAR = (double)normalError / getNumberMessages(MessageType.NORMAL);  // FAR = false accept rate (misses)
+		double FRR = (double)spamError / getNumberMessages(MessageType.SPAM);  // FRR = false reject rate (false alarms)
+		System.out.println("False accept rate: " + FAR + "   false reject rate: " + FRR);
     }
 
 
