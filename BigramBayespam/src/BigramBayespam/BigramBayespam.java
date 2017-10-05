@@ -87,7 +87,6 @@ public class BigramBayespam
 
         listing_regular = dir_listing[0].listFiles();
         listing_spam    = dir_listing[1].listFiles();
-        /// System.out.println(listing_regular.length + " " + listing_spam.length);		
     }
 
     
@@ -128,23 +127,27 @@ public class BigramBayespam
             FileInputStream i_s = new FileInputStream( messages[i] );
             BufferedReader in = new BufferedReader(new InputStreamReader(i_s));
             String line;
-            String word;
+            String word = null;
+            String bigram = null;
             Scanner sc;
+            int k = 1;
             while ((line = in.readLine()) != null)                      // read a line
             {
             	/// Scanner go through the lines and takes the single words
             	/// Omitting symbols and words shorter than 4 characters
             	sc = new Scanner(line);
             	while(sc.hasNext()){
-            	 word = sc.next().replaceAll("[^a-zA-Z]", "").toLowerCase();
+				if(k  == 1)
+            		word = sc.next().replaceAll("[^a-zA-Z]", "").toLowerCase();
        
             	 if(sc.hasNext()){
-            		 word2 = sc.next().replaceAll("[^a-zA-Z]", "").toLowerCase();
+            		 word2 = sc.next().replaceAll("[^a-zA-Z]", "").toLowerCase();            		
+            		 k = 0;
             	 }
             	 if(!word.isEmpty() && word.length() >= minimalSize)
             		 addWord(word.concat(word2.toString()), type);    // add them to the vocabulary
+            	 word = word2;
             	}
-                
             }
             in.close();
         }
@@ -180,27 +183,38 @@ public class BigramBayespam
 	        {
 	            FileInputStream i_s = new FileInputStream( messages[i] );
 	            BufferedReader in = new BufferedReader(new InputStreamReader(i_s));
-	            String text;
-	            String word;
+	            String word = null;
 	            Scanner sc;
-				while ((text = in.readLine()) != null)                      // read a line
+	            String line;
+	            int k = 1;
+	            while ((line = in.readLine()) != null)                      // read a line
 	            {
 	            	/// Scanner go through the lines and takes the single words
-	            	/// Omitting words which are not saved in the hash-table
-	            	sc = new Scanner(text);
+	            	/// Omitting words which are not in the vocabulary
+	            	sc = new Scanner(line);
 	            	while(sc.hasNext()){
-	            	 word = sc.next().replaceAll("[^a-zA-Z]", "").toLowerCase();    
+					if(k  == 1)
+	            		word = sc.next().replaceAll("[^a-zA-Z]", "").toLowerCase();
+	       
 	            	 if(sc.hasNext()){
-	            		 word2 = sc.next().replaceAll("[^a-zA-Z]", "").toLowerCase();
+	            		 word2 = sc.next().replaceAll("[^a-zA-Z]", "").toLowerCase();            		
+	            		 k = 0;
 	            	 }
-	            	 if(vocab.containsKey(word.concat(word2.toString()))){
-	            		 	// Add the probability only if the word is in the training set
-		         	        postRegular += vocab.get(word.concat(word2.toString())).likelihood_regular;
-		        	        postSpam  += vocab.get(word.concat(word2.toString())).likelihood_spam;
-		            	}
-		            	 
+	               	 if(vocab.containsKey(word.concat(word2.toString()))){
+	          		 	// Add the probability only if the word is in the training set
+	           	        postRegular += vocab.get(word.concat(word2.toString())).likelihood_regular;
+	          	        postSpam  += vocab.get(word.concat(word2.toString())).likelihood_spam;
+	              	}
+	            	 word = word2;
 	            	}
 	            }
+				
+           	 if(vocab.containsKey(word.concat(word2.toString()))){
+     		 	// Add the probability only if the word is in the training set
+      	        postRegular += vocab.get(word.concat(word2.toString())).likelihood_regular;
+     	        postSpam  += vocab.get(word.concat(word2.toString())).likelihood_spam;
+         	}
+				
 	            in.close();
 	            postRegular *= priorProb; 		// Post probabilities are multiplied by the prior probability
  	            postSpam *= priorProb;
@@ -225,9 +239,9 @@ public class BigramBayespam
     public static void main(String[] args)
     throws IOException
     {
-    	int minimalSize = 4;	/// minimal size of the word in the vocabulary
+    	int minimalSize = 5;	/// minimal size of the word in the vocabulary
     	double e = 0.001;		/// tuning parameter for computing the likelihood
-    	int threshold = 5;		/// minimum frequency allowed for a word in the vocabulary 
+    	int threshold = 2;		/// minimum frequency allowed for a word in the vocabulary 
     	int alpha = 0; 			/// tuning parameter for the post-probabilities (not used)
     	
         // Location of the directory (the path) taken from the cmd line (first arg)
@@ -277,7 +291,6 @@ public class BigramBayespam
         	/// Take the number of occurrances of a word
         	double regular_freq = vocab.get(word).counter_regular;
         	double spam_freq = vocab.get(word).counter_spam;
-        	
         	if(regular_freq != 0)
         		vocab.get(word).setLikelihoodRegular(Math.log10(regular_freq) + Math.log10(nWordsRegular)); /// the prob is log-normalized
         	else
@@ -290,7 +303,7 @@ public class BigramBayespam
         }
         
         // Print out the hash table
-        // printVocab();
+       // printVocab();
          
         // Find the post-class probabilities and computes the error per category
         int normalError = 0;  
